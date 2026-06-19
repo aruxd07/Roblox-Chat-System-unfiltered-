@@ -1,0 +1,26 @@
+--Create a script inside SSS name it "ChatServer" and paste ts--
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local TextService = game:GetService("TextService")
+
+local remotes = ReplicatedStorage:WaitForChild("ChatRemotes")
+local sendMessage = remotes:WaitForChild("SendMessage")
+local receiveMessage = remotes:WaitForChild("ReceiveMessage")
+
+sendMessage.OnServerEvent:Connect(function(player, message)
+    if type(message) ~= "string" or string.len(message) == 0 or string.len(message) > 200 then return end
+    
+    local filterResult
+    local success, err = pcall(function()
+        filterResult = TextService:FilterStringAsync(message, player.UserId)
+    end)
+    
+    if success and filterResult then
+        for _, targetPlayer in ipairs(Players:GetPlayers()) do
+            pcall(function()
+                local filteredMessage = filterResult:GetChatForUserAsync(targetPlayer.UserId)
+                receiveMessage:FireClient(targetPlayer, player, filteredMessage)
+            end)
+        end
+    end
+end)
